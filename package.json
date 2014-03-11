@@ -1,0 +1,30 @@
+{
+  "name": "web-htmlparser",
+  "version": "0.0.1",
+  "description": "web html parser, can send post form-data or url-encoded data and parser result as a table",
+  "main": "index.js",
+  "dependencies": {
+    "jquery": "~2.1.0",
+    "jsdom": "~0.10.2",
+    "form-data": "~0.1.2",
+    "request": "~2.34.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zyp001a/node-web-htmlparser.git"
+  },
+  "keywords": [
+    "node",
+    "crawler"
+  ],
+  "author": "Yuanpeng Zhou",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zyp001a/node-web-htmlparser/issues"
+  },
+  "homepage": "https://github.com/zyp001a/node-web-htmlparser"
+}

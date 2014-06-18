@@ -1,100 +1,87 @@
-'use strict';
+var events = require('events');
 
 var request = require('request');
 var fs = require('fs');
 var FormData = require('form-data');
-var env = require('jsdom').env;
 var jquery = require('jquery');
+var utils = require('./utils');
+var env = require('jsdom').env;
 
-var dumpData = function(data, storeKey){
-	if(!storeKey){
-		console.warn("result is not stored in database");
-	}
+var baseUrl, domain, protocal;
+var emitter = new events.EventEmitter();
+module.exports = {
+	run: run,
+
+	getBaseUrl: function (){return baseUrl;},
+	getDomain: function (){return domain;},
+	getProtocal: function (){return protocal;},
+
+	emitter: emitter,
+
+	parseHref: parseHref
 };
-var printTable = function(table, sep, seq){
-	if(!table.length){
-		console.warn("empty table");
-		process.exit(0);
+
+function parseHref(href){
+	var baseUrl = this.getBaseUrl();
+	if(/^http|https|ftp:\/\/[^\/]+/.test(href))
+    return href;
+  else if(/^\/\//.test(href))
+		return "http:" + href;
+  else if(/^\//.test(href))
+		return this.getDomain() + href;
+	else if(/\/$/.test(baseUrl))
+		return baseUrl + href;
+	else
+		return this.getDomain() + "/" + href;
+}
+
+function defaultParseFn($){
+	return $("html").html();
+}
+function defaultResultFn(data){
+	console.log(data);
+}
+
+function run(config){
+	var crawler = this;
+	if(!config || !config.hasOwnProperty("html")){
+		console.error("config error");
+		return;
 	}
-	if(!sep) sep = "\t";
-	if(!seq) seq = table[0];
-	table.forEach(function(row){
-		var line = '';
-		for (var key in seq){
-			if(line != '') line += sep;
-			line += row[key];
-		}
-		line += '\n';
-		process.stdout.write(line);
-	});
-};
-var craw = 
-	function (html, processFunction, storeKey) {
-		// first argument can be html string, filename, or url
-		env(html, function (errors, window) {
-			//    console.warn(errors);
-			var $ = jquery(window);
-			var data = processFunction($);
-			if(storeKey){
-				dumpData(data, storeKey);
-				printTable(data);
-			}
-		});
-	};
-var crawPostUrlEncoded = 
-	function(url, postData, processFunction, storeKey){
-		request.post(url, {form:postData}, function (error, res, body) {
-			if (!error && res.statusCode == 200) {
-				craw(body, processFunction, storeKey);
-			}
-			else{
-				console.warn("error: "+error);
-				console.warn("statusCode: "+res.statusCode);
-			}
-		});
-	};
-var crawPostFormData = 
-	function(url, postData, processFunction, storeKey){
-		var form = new FormData();
-		for (var key in postData){
-			form.append(key, postData[key]);
-		}
-		form.submit(url, function(error, res) {
-			// res – response object (http.IncomingMessage)  //
-			if (!error && res.statusCode == 200) {
-				var body='';
-				res.on('data', function(chunk) {
-					body += chunk;
-				});
-				res.on('end', function(chunk) {
-					craw(body, processFunction, storeKey);
-				});
+	var parseFn, resultFn, finishEvent;
+	if(config.parseFn)
+		parseFn = config.parseFn;
+	else
+		parseFn = defaultParseFn;
+	if(config.resultFn)
+    resultFn = config.resultFn;
+  else
+    resultFn = defaultResultFn;
 
-			}
-			else{
-				console.warn("error: "+error);
-				console.warn("statusCode: "+res.statusCode);
-			}
-		});
-	};
-var writeTestFile = 
-	function($){
-		var testFileName='test.html';
-		var data=$('html').html();
-		fs.writeFile(testFileName, data, function (err){
-			if (err) throw err;
-			console.warn('test.html is saved!');
-		});
-		return data;
-	};
-module.exports.printTable = printTable;
-module.exports.craw = craw;	
-module.exports.crawPostUrlEncoded = crawPostUrlEncoded;
-module.exports.crawPostFormData = crawPostFormData;
-module.exports.writeTestFile = writeTestFile;
+	var arr = /^(((http|https|ftp):\/\/[^\/]+)\S+(?:[^\/]+)?)$/.exec(config.html);
+//	console.log(arr);
+	if(arr != null){
+		if(arr[1]) baseUrl = arr[1];
+		if(arr[2]) domain = arr[2];
+		if(arr[3]) protocal = arr[3];
+	}
+	env(config.html, function (errors, window) {
+    //    console.warn(errors);
+    var domenv={};
+    var $ = jquery(window);
 
+    var data = parseFn($);
+//		console.log("begin");
+    resultFn(data);
+//		console.log("finish");
+		var href = null;
+		if(config.nextFn)
+			href = config.nextFn($);
 
-
-
-	//craw("http://www.baidu.com", getTable);
+//		console.log(href);
+		if(config.finishEvent)
+			emitter.emit(config.finishEvent, href);
+  });		
+	
+}
 

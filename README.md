@@ -5,3 +5,6 @@ var Parser = require("web-htmlparser");
 Parser.craw("http://www.baidu.com", Parser.writeTestFile);
 Parser.crawPostFormData("http://www.baidu.com/s", {wd:'hello'}, Parser.writeTestFile);
 ```
+
+to use phantomjs, phantomjs must be installed at first
+to use selenium, 

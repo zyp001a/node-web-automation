@@ -48,11 +48,12 @@ function parseHref(href){
 		return this.getDomain() + "/" + href;
 }
 
-function defaultParseFn($){
-	return $("html").html();
+function defaultParseFn($, window, fn){
+	fn($("html").html());
 }
-function defaultResultFn(data){
+function defaultResultFn(data, fn){
 	console.log(data);
+	fn();
 }
 function removeDumpEvent(event){
 	var tarFile = this.dumpDir + "/" +event;
@@ -123,17 +124,18 @@ function nav(config){
 			var domenv = {};
 			var $ = jquery(window);
 
-			var data = parseFn($, window);
-			resultFn(data);
-			var href = null;
-			if(config.nextFn)
-				href = config.nextFn($, window);
-
-			if(config.event){
-				if(crawler.enableDumpEvent)
-					crawler.dumpEvent(config.event, href);
-				crawler.emitter.emit(config.event, href, true);
-			}
+			parseFn($, window, function(data){
+				resultFn(data, function(){
+					var href = null;
+					if(config.nextFn)
+						href = config.nextFn($, window);
+					if(config.event){
+						if(crawler.enableDumpEvent)
+							crawler.dumpEvent(config.event, href);
+						crawler.emitter.emit(config.event, href, true);
+					}
+				});
+			});
 		});		
 	}
 	else{

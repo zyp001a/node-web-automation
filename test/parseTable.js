@@ -5,7 +5,7 @@ describe('Crawler', function(){
 		it('use jsdom to parse example html', function(done){
 
 			var Crawler = require('../index');
-			function parse($){
+			function parse($, window, fn){
 				//	$('.next').click();
 				var table = $('#infolist dl').map(function() {
 					// $(this) is used more than once; cache it for performance.
@@ -18,7 +18,7 @@ describe('Crawler', function(){
 						company: $row.find('.titbar h2').text()		
 					};
 				}).get();
-				return table;
+				fn(table);
 			}
 
 
@@ -31,8 +31,9 @@ describe('Crawler', function(){
 				Crawler.nav({
 					html: "test/example.html",
 					parseFn: parse,
-					resultFn:  function(result){
+					resultFn:  function(result, fn){
 						assert.equal(35, result.length);
+						fn();
 					},
 					nextFn: function($, window){
 						return window.location.href;
@@ -51,8 +52,9 @@ describe('Crawler', function(){
 			Crawler.nav({
         html: "test/example.html",
         parseFn: parse,
-        resultFn:  function(result){
+        resultFn:  function(result, fn){
           assert.equal(35, result.length);
+					fn();
         },
         nextFn: function($, window){
           return window.location.href;

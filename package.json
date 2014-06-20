@@ -1,6 +1,6 @@
 {
   "name": "web-htmlparser",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "web html parser, can send post form-data or url-encoded data and parser result as a table",
   "main": "index.js",
   "dependencies": {

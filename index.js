@@ -2,6 +2,8 @@ var events = require('events');
 
 var request = require('request');
 var fs = require('fs');
+var mkdirp = require("mkdirp");
+var path = require('path');
 var FormData = require('form-data');
 var jquery = require('jquery');
 var utils = require('./utils');
@@ -9,6 +11,7 @@ var env = require('jsdom').env;
 
 var baseUrl, domain, protocal;
 var emitter = new events.EventEmitter();
+var dumpDir = "./dump";
 module.exports = {
 	nav: nav,
 
@@ -17,8 +20,18 @@ module.exports = {
 	getProtocal: function (){return protocal;},
 
 	emitter: emitter,
+	
+	dumpDir: dumpDir,
 
-	parseHref: parseHref
+	parseHref: parseHref,
+	dumpEvent: dumpEvent,
+	removeDumpEvent: removeDumpEvent,
+	writeDumpEvent: writeDumpEvent,
+	readEvent: readEvent,
+	utils: utils,
+	
+	enableDumpEvent: true,
+	forceRemote: false
 };
 
 function parseHref(href){
@@ -41,43 +54,91 @@ function defaultParseFn($){
 function defaultResultFn(data){
 	console.log(data);
 }
-
+function removeDumpEvent(event){
+	var tarFile = this.dumpDir + "/" +event;
+	fs.unlinkSync(tarFile);
+}
+function writeDumpEvent(event){
+	var tarFile = this.dumpDir + "/" +event;
+	fs.writeFileSync(tarFile, "test");
+}
+function dumpEvent(event, href){
+	var tarFile = this.dumpDir + "/" +event;
+	mkdirp.sync(path.dirname(tarFile));
+	fs.writeFileSync(tarFile, href.toString());
+}
+function readEvent(event){
+	var tarFile = this.dumpDir + "/" +event;
+	if(fs.existsSync(tarFile)){
+		var str = fs.readFileSync(tarFile);
+		try {
+			var json = JSON.parse(str);
+			return json;
+		} catch (e) {
+			return str;
+		}
+	}
+	else{
+		return null;
+	}
+}
+function wait(event, fn){
+	var href = readEvent(event);
+	if(href)
+		fn(href);
+	else
+		this.emitter.on(event, fn);
+}
 function nav(config){
 	var crawler = this;
-	if(!config || !config.hasOwnProperty("html")){
-		console.error("config error");
-		return;
+	var localHref;
+	if(!crawler.forceRemote){
+		localHref = crawler.readEvent(config.event);
 	}
-	var parseFn, resultFn, finishEvent;
-	if(config.parseFn)
-		parseFn = config.parseFn;
-	else
-		parseFn = defaultParseFn;
-	if(config.resultFn)
-    resultFn = config.resultFn;
-  else
-    resultFn = defaultResultFn;
+//if forceRemote or not dump stored
+	if(crawler.forceRemote || !localHref){
 
-	var arr = /^(((http|https|ftp):\/\/[^\/]+)\S+(?:[^\/]+)?)$/.exec(config.html);
-//	console.log(arr);
-	if(arr != null){
-		if(arr[1]) baseUrl = arr[1];
-		if(arr[2]) domain = arr[2];
-		if(arr[3]) protocal = arr[3];
+		if(!config || !config.hasOwnProperty("html")){
+			console.error("config error");
+			return;
+		}
+		var parseFn, resultFn, event;
+		if(config.parseFn)
+			parseFn = config.parseFn;
+		else
+			parseFn = defaultParseFn;
+		if(config.resultFn)
+			resultFn = config.resultFn;
+		else
+			resultFn = defaultResultFn;
+
+		var arr = /^(((http|https|ftp):\/\/[^\/]+)\S+(?:[^\/]+)?)$/.exec(config.html);
+		//	console.log(arr);
+		if(arr != null){
+			if(arr[1]) baseUrl = arr[1];
+			if(arr[2]) domain = arr[2];
+			if(arr[3]) protocal = arr[3];
+		}
+		env(config.html, function (errors, window) {
+			var domenv = {};
+			var $ = jquery(window);
+
+			var data = parseFn($, window);
+			resultFn(data);
+			var href = null;
+			if(config.nextFn)
+				href = config.nextFn($, window);
+
+			if(config.event){
+				if(crawler.enableDumpEvent)
+					crawler.dumpEvent(config.event, href);
+				crawler.emitter.emit(config.event, href, true);
+			}
+		});		
 	}
-	env(config.html, function (errors, window) {
-    var domenv={};
-    var $ = jquery(window);
-
-    var data = parseFn($);
-    resultFn(data);
-		var href = null;
-		if(config.nextFn)
-			href = config.nextFn($);
-
-		if(config.finishEvent)
-			emitter.emit(config.finishEvent, href);
-  });		
+	else{
+		crawler.emitter.emit(config.event, localHref, false);
+	}
 	
 }
 

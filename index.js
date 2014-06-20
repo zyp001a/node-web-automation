@@ -10,7 +10,7 @@ var env = require('jsdom').env;
 var baseUrl, domain, protocal;
 var emitter = new events.EventEmitter();
 module.exports = {
-	run: run,
+	nav: nav,
 
 	getBaseUrl: function (){return baseUrl;},
 	getDomain: function (){return domain;},
@@ -42,7 +42,7 @@ function defaultResultFn(data){
 	console.log(data);
 }
 
-function run(config){
+function nav(config){
 	var crawler = this;
 	if(!config || !config.hasOwnProperty("html")){
 		console.error("config error");
@@ -66,19 +66,15 @@ function run(config){
 		if(arr[3]) protocal = arr[3];
 	}
 	env(config.html, function (errors, window) {
-    //    console.warn(errors);
     var domenv={};
     var $ = jquery(window);
 
     var data = parseFn($);
-//		console.log("begin");
     resultFn(data);
-//		console.log("finish");
 		var href = null;
 		if(config.nextFn)
 			href = config.nextFn($);
 
-//		console.log(href);
 		if(config.finishEvent)
 			emitter.emit(config.finishEvent, href);
   });		

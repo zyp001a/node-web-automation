@@ -1,7 +1,7 @@
 var assert = require("assert");
 
 describe('Crawler', function(){
-  describe('#run()', function(){
+  describe('#nav()', function(){
 		it('use jsdom to parse example html', function(done){
 
 			var Crawler = require('../index');
@@ -24,7 +24,7 @@ describe('Crawler', function(){
 				done();
 			});
 
-			Crawler.run({
+			Crawler.nav({
 				html: "test/example.html",
 				parseFn: parse,
 				resultFn:  function(result){
